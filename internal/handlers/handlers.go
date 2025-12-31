@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"devstack/internal/models"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -14,8 +16,8 @@ func GetUsersHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		rows, err := db.Query(`
-			SELECT id, name, created_at
-			FROM users`)
+		SELECT id, name, created_at
+		FROM users`)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -23,15 +25,18 @@ func GetUsersHandler(db *sql.DB) http.HandlerFunc {
 		}
 		defer rows.Close()
 
+		fmt.Println("in the handler")
 		users := []models.Users{}
 
 		for rows.Next() {
 			var user models.Users
+
 			if err := rows.Scan(
 				&user.ID,
 				&user.Name,
-				&user.Created_at,
+				&user.CreatedAt,
 			); err != nil {
+				log.Printf("SCAN ERROR: %v\n", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
