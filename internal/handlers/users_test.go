@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -175,4 +176,187 @@ func TestGetUserHandler_MethodNotAllowed(t *testing.T) {
 
 	assert.Equal(t, http.StatusMethodNotAllowed, res.StatusCode)
 
+}
+
+func TestCreateUserHandler(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	body := `{
+		"Name":"Bell",
+		"Pin":"1234"
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "/users/", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	handler := CreateUserHandler(db)
+	handler(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
+
+	var user models.Users
+	json.NewDecoder(res.Body).Decode(&user)
+
+	assert.Equal(t, "Bell", user.Name)
+	assert.Equal(t, 1234, user.Pin)
+	assert.NotZero(t, user.ID)
+
+}
+
+func TestCreateUserHandler_InvalidName(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	body := `{
+		"Name":"   ",
+		"Pin":"1234"
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "/users/", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	handler := CreateUserHandler(db)
+	handler(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
+
+func TestCreateUserHandler_InvalidPin(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	body := `{
+		"Name":"bell",
+		"Pin":"123564"
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "/users/", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	handler := CreateUserHandler(db)
+	handler(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
+
+func TestCreateUserHandler_InvalidPinEmpty(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	body := `{
+		"Name":"bell",
+		"Pin":""
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "/users/", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	handler := CreateUserHandler(db)
+	handler(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
+
+func TestCreateUserHandler_InvalidMethod(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	body := `{
+		"Name":"bell",
+		"Pin":"1234"
+	}`
+
+	req := httptest.NewRequest(http.MethodGet, "/users/", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	handler := CreateUserHandler(db)
+	handler(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusMethodNotAllowed, res.StatusCode)
+}
+
+func TestCreateUserHandler_NoBody(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/users/", nil)
+	w := httptest.NewRecorder()
+	handler := CreateUserHandler(db)
+	handler(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
+
+func TestCreateUserHandler_MissingFields(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	body := `{
+		"Name":"bell",
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "/users/", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	handler := CreateUserHandler(db)
+	handler(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
+
+func TestCreateUserHandler_InvalidFields(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	body := `{
+		"Name":"bell",
+		"Pin":"1234",
+		"extra":"973"
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "/users/", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	handler := CreateUserHandler(db)
+	handler(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+}
+
+func TestCreateUserHandler_InvalidPinData(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	body := `{
+		"Name":"bell",
+		"Pin":"abc"
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "/users/", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	handler := CreateUserHandler(db)
+	handler(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 }

@@ -15,6 +15,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/users/", handlers.GetUsersHandler(database))
+	mux.HandleFunc("/users/", handlers.CreateUserHandler(database))
 	mux.HandleFunc("users/{id}", handlers.GetUserHandler(database))
 
 	log.Println("Server running on :8080")
