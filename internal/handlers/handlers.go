@@ -90,3 +90,50 @@ func GetUserHandler(db *sql.DB) http.HandlerFunc {
 	}
 
 }
+
+func CreateUserHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var input models.CreateUserInput
+
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+
+		if err := decoder.Decode(&input); err != nil {
+			http.Error(w, "Invalid JSON body", http.StatusBadRequest)
+			return
+		}
+
+		input.Name = strings.TrimSpace(input.Name)
+		if input.Name == "" {
+			http.Error(w, "Name is required", http.StatusBadRequest)
+			return
+		}
+		if len(input.Pin) != 4 {
+			http.Error(w, "4 digit PIN required", http.StatusBadRequest)
+			return
+		}
+
+		var user models.Users
+		err := db.QueryRow(`
+		INSERT INTO users (name,pin)
+		VALUES($1,$2)
+		RETURNING id, name, pin, created_at
+		`, input.Name, input.Pin).Scan(
+			&user.ID,
+			&user.Name,
+			&user.Pin,
+			&user.CreatedAt,
+		)
+		if err != nil {
+			http.Error(w, "Failed to create user", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(user)
+	}
+}

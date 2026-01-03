@@ -16,3 +16,8 @@ type Snippets struct {
 	CreatedAt string
 	UpdatedAt *string
 }
+
+type CreateUserInput struct {
+	Name string
+	Pin  string
+}
